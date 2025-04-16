@@ -35,34 +35,59 @@ class LocalApiService {
                 try {
                     // Get existing users
                     const users = JSON.parse(localStorage.getItem(this.#KEYS.USERS) || '[]');
-                    
-                    // Check if email already exists
-                    if (users.some(user => user.email === userData.email)) {
-                        throw new Error('Bu e-posta adresi zaten kayıtlı');
+
+                    // Check if the user is new or updating
+                    const existingUserIndex = users.findIndex(user => user.email === userData.email);
+
+                    if (existingUserIndex === -1) {
+                        // New user registration
+                        // Check if email already exists
+                        if (users.some(user => user.email === userData.email)) {
+                            throw new Error('Bu e-posta adresi zaten kayıtlı');
+                        }
+
+                        // Add userId
+                        const newUser = {
+                            ...userData,
+                            userId: this.#generateUserId(userData.email),
+                            registeredAt: new Date().toISOString(),
+                            connections: [],
+                            points: 0
+                        };
+
+                        // Generate QR code
+                        const qrCode = this.#generateQRCode(newUser);
+
+                        // Save user
+                        users.push(newUser);
+                        localStorage.setItem(this.#KEYS.USERS, JSON.stringify(users));
+
+                        // Return response with QR code
+                        resolve({
+                            success: true,
+                            user: newUser,
+                            qrCode
+                        });
+                    } else {
+                        // Update existing user
+                        const existingUser = users[existingUserIndex];
+
+                        // Update only the fields that are provided
+                        users[existingUserIndex] = {
+                            ...existingUser,
+                            ...userData // Merge existing user data with new data
+                        };
+
+                        // Save updated user
+                        localStorage.setItem(this.#KEYS.USERS, JSON.stringify(users));
+
+                        // Return response with updated user
+                        resolve({
+                            success: true,
+                            user: users[existingUserIndex],
+                            qrCode: this.#generateQRCode(users[existingUserIndex]) // Generate new QR code if needed
+                        });
                     }
-                    
-                    // Add userId
-                    const newUser = {
-                        ...userData,
-                        userId: this.#generateUserId(userData.email),
-                        registeredAt: new Date().toISOString(),
-                        connections: [],
-                        points: 0
-                    };
-                    
-                    // Generate QR code
-                    const qrCode = this.#generateQRCode(newUser);
-                    
-                    // Save user
-                    users.push(newUser);
-                    localStorage.setItem(this.#KEYS.USERS, JSON.stringify(users));
-                    
-                    // Return response with QR code
-                    resolve({
-                        success: true,
-                        user: newUser,
-                        qrCode
-                    });
                 } catch (error) {
                     resolve({
                         success: false,

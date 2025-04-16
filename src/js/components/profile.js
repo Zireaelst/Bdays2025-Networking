@@ -104,9 +104,14 @@ class ProfileManager {
             linkedin: form.querySelector('#edit-linkedin').value || ''
         };
 
+        // Debugging: Log the data being submitted
+        console.log('Submitting form with data:', updatedData);
+
         // Use the API service to update the user
         LocalApiService.registerUser(updatedData)
             .then(response => {
+                // Debugging: Log the API response
+                console.log('API Response:', response);
                 if (response.success) {
                     // Update local storage
                     StorageManager.saveUserData(response.user);
@@ -121,10 +126,12 @@ class ProfileManager {
                     
                     NotificationManager.success('Profil başarıyla güncellendi!');
                 } else {
+                    console.error('Error:', response.error);
                     NotificationManager.error(response.error || 'Profil güncellenirken bir hata oluştu');
                 }
             })
             .catch(error => {
+                console.error('Submission error:', error);
                 NotificationManager.error('Profil güncellenirken bir hata oluştu: ' + error.message);
             })
             .finally(() => {
