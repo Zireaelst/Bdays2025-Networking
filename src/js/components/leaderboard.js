@@ -13,40 +13,53 @@ class LeaderboardManager {
         }, ANIMATION.LEADERBOARD_UPDATE);
     }
 
-    static updateLeaderboard() {
-        const leaderboard = StorageManager.getLeaderboard();
-        
-        // Sort by points in descending order
-        leaderboard.sort((a, b) => b.points - a.points);
-
-        // Clear current leaderboard
-        this.container.innerHTML = '';
-
-        // Add new items with staggered animation
-        leaderboard.forEach((user, index) => {
-            const item = document.createElement('div');
-            item.className = 'leaderboard-item';
-            item.style.animationDelay = `${index * 0.1}s`;
-
-            item.innerHTML = `
-                <span class="rank ${index < 3 ? 'top-' + (index + 1) : ''}">#${index + 1}</span>
-                <div class="user-info">
-                    <strong>${user.name}</strong>
-                    <a href="${user.linkedin}" target="_blank" rel="noopener noreferrer">
-                        LinkedIn Profili
-                    </a>
-                </div>
-                <span class="points">${user.points} puan</span>
-            `;
-
-            this.container.appendChild(item);
-        });
-
-        // Add empty state if no users
-        if (leaderboard.length === 0) {
+    static async updateLeaderboard() {
+        try {
+            // Get leaderboard from API service
+            const response = await LocalApiService.getLeaderboard();
+            
+            if (!response.success) {
+                throw new Error(response.error);
+            }
+            
+            const leaderboard = response.leaderboard;
+            
+            // Clear current leaderboard
+            this.container.innerHTML = '';
+    
+            // Add new items with staggered animation
+            leaderboard.forEach((user, index) => {
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                item.style.animationDelay = `${index * 0.1}s`;
+    
+                item.innerHTML = `
+                    <span class="rank ${index < 3 ? 'top-' + (index + 1) : ''}">#${index + 1}</span>
+                    <div class="user-info">
+                        <strong>${user.name}</strong>
+                        ${user.linkedin ? `<a href="${user.linkedin}" target="_blank" rel="noopener noreferrer">
+                            LinkedIn Profili
+                        </a>` : ''}
+                    </div>
+                    <span class="points">${user.points} puan</span>
+                `;
+    
+                this.container.appendChild(item);
+            });
+    
+            // Add empty state if no users
+            if (leaderboard.length === 0) {
+                this.container.innerHTML = `
+                    <div class="leaderboard-empty">
+                        <p>Henüz katılımcı bulunmuyor</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error('Leaderboard error:', error);
             this.container.innerHTML = `
-                <div class="leaderboard-empty">
-                    <p>Henüz katılımcı bulunmuyor</p>
+                <div class="leaderboard-error">
+                    <p>Liderlik tablosu yüklenirken bir hata oluştu</p>
                 </div>
             `;
         }

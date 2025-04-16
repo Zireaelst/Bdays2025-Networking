@@ -27,7 +27,7 @@ class QRManager {
             const scannedData = JSON.parse(decodedText);
             
             // Validate scanned data
-            if (!scannedData.userId || !scannedData.name || !scannedData.linkedin) {
+            if (!scannedData.userId || !scannedData.name) {
                 throw new Error('Geçersiz QR kod');
             }
 
@@ -38,38 +38,35 @@ class QRManager {
             }
 
             // Check if scanning own QR code
-            if (scannedData.userId === btoa(userData.email)) {
+            if (scannedData.userId === userData.userId) {
                 NotificationManager.error('Kendi QR kodunuzu tarayamazsınız!');
                 return;
             }
 
-            // Check if already connected
-            if (userData.connections.has(scannedData.userId)) {
-                NotificationManager.error('Bu kişiyle zaten bağlantı kurdunuz!');
-                return;
+            // Use the LocalApiService to add connection
+            const response = await LocalApiService.addConnection(userData.userId, scannedData.userId);
+            
+            if (!response.success) {
+                throw new Error(response.error);
             }
-
-            // Add connection and update points
-            userData.connections.add(scannedData.userId);
-            userData.points += POINTS.NEW_CONNECTION;
-
-            // Check for bonus points
-            if (userData.connections.size === 5) {
-                userData.points += POINTS.BONUS_FIRST_FIVE;
+            
+            // Update local user data
+            StorageManager.saveUserData(response.user);
+            
+            // Update UI
+            ProfileManager.updatePoints(response.user.points);
+            LeaderboardManager.updateLeaderboard();
+            
+            // Show success notification with point information
+            const connectionName = response.connection.name;
+            NotificationManager.success(`${connectionName} ile bağlantı kuruldu! +${POINTS.NEW_CONNECTION} puan kazandınız!`);
+            
+            // Show bonus notifications if applicable
+            if (response.user.connections.length === 5) {
                 NotificationManager.success('Tebrikler! İlk 5 bağlantı bonusu kazandınız! +20 puan');
-            } else if (userData.connections.size === 10) {
-                userData.points += POINTS.BONUS_FIRST_TEN;
+            } else if (response.user.connections.length === 10) {
                 NotificationManager.success('Tebrikler! İlk 10 bağlantı bonusu kazandınız! +50 puan');
             }
-
-            // Save updated user data
-            StorageManager.saveUserData(userData);
-            StorageManager.saveConnections(userData.connections);
-
-            // Update UI
-            ProfileManager.updatePoints(userData.points);
-            
-            NotificationManager.success(`${scannedData.name} ile bağlantı kuruldu! +${POINTS.NEW_CONNECTION} puan kazandınız!`);
 
         } catch (error) {
             NotificationManager.error('Geçersiz QR kod: ' + error.message);

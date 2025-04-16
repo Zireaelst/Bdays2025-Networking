@@ -1,0 +1,21 @@
+{
+  "name": "blockchain-days-25-networking",
+  "version": "1.0.0",
+  "description": "Blockchain Days'25 Networking Event application",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "blockchain",
+    "networking",
+    "event"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+} 

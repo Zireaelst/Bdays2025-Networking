@@ -86,38 +86,52 @@ class ProfileManager {
     }
 
     static handleProfileUpdate(form, modal) {
+        // Show loading indicator
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.innerHTML;
+        submitButton.innerHTML = 'Kaydediliyor...';
+        submitButton.disabled = true;
+        
+        // Get current user data
+        const userData = StorageManager.getUserData();
+        
+        // Prepare updated data
         const updatedData = {
-            ...StorageManager.getUserData(),
+            ...userData,
             name: form.querySelector('#edit-name').value,
             email: form.querySelector('#edit-email').value,
-            phone: form.querySelector('#edit-phone').value,
-            linkedin: form.querySelector('#edit-linkedin').value
+            phone: form.querySelector('#edit-phone').value || '',
+            linkedin: form.querySelector('#edit-linkedin').value || ''
         };
 
-        // Update user data
-        StorageManager.saveUserData(updatedData);
-
-        // Update leaderboard
-        const leaderboard = StorageManager.getLeaderboard();
-        const userIndex = leaderboard.findIndex(user => user.email === updatedData.email);
-        if (userIndex !== -1) {
-            leaderboard[userIndex] = {
-                name: updatedData.name,
-                points: updatedData.points,
-                linkedin: updatedData.linkedin
-            };
-            StorageManager.saveLeaderboard(leaderboard);
-        }
-
-        // Update UI
-        this.updateProfile();
-        LeaderboardManager.updateLeaderboard();
-
-        // Close modal
-        modal.classList.remove('active');
-        setTimeout(() => modal.remove(), 300);
-
-        NotificationManager.success('Profil başarıyla güncellendi!');
+        // Use the API service to update the user
+        LocalApiService.registerUser(updatedData)
+            .then(response => {
+                if (response.success) {
+                    // Update local storage
+                    StorageManager.saveUserData(response.user);
+                    
+                    // Update UI
+                    this.updateProfile();
+                    LeaderboardManager.updateLeaderboard();
+                    
+                    // Close modal
+                    modal.classList.remove('active');
+                    setTimeout(() => modal.remove(), 300);
+                    
+                    NotificationManager.success('Profil başarıyla güncellendi!');
+                } else {
+                    NotificationManager.error(response.error || 'Profil güncellenirken bir hata oluştu');
+                }
+            })
+            .catch(error => {
+                NotificationManager.error('Profil güncellenirken bir hata oluştu: ' + error.message);
+            })
+            .finally(() => {
+                // Reset button state
+                submitButton.innerHTML = originalButtonText;
+                submitButton.disabled = false;
+            });
     }
 
     static updatePoints(points) {
@@ -126,16 +140,7 @@ class ProfileManager {
 
         userData.points = points;
         StorageManager.saveUserData(userData);
-        this.updateProfile();
-
-        // Update leaderboard
-        const leaderboard = StorageManager.getLeaderboard();
-        const userIndex = leaderboard.findIndex(user => user.email === userData.email);
-        if (userIndex !== -1) {
-            leaderboard[userIndex].points = points;
-            StorageManager.saveLeaderboard(leaderboard);
-            LeaderboardManager.updateLeaderboard();
-        }
+        this.elements.points.textContent = points;
     }
 }
 
